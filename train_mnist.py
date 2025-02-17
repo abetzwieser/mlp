@@ -6,7 +6,7 @@
 import numpy as np # linear algebra
 import struct
 from array import array
-from os.path  import join
+from os.path import join
 
 #
 # MNIST Data Loader Class
@@ -38,8 +38,7 @@ class MnistDataloader(object):
         for i in range(size):
             img = np.array(image_data[i * rows * cols:(i + 1) * rows * cols])
             img = img.reshape(28, 28)
-            images[i][:] = img            
-        
+            images[i] = img            
         return images, labels
             
     def load_data(self):
@@ -71,13 +70,14 @@ def show_images(images, title_texts):
     plt.figure(figsize=(30,20))
     index = 1    
     for x in zip(images, title_texts):        
-        image = x[0]        
+        image = x[0]
         title_text = x[1]
-        plt.subplot(rows, cols, index)        
+        plt.subplot(rows, cols, index)
         plt.imshow(image, cmap=plt.cm.gray)
         if (title_text != ''):
             plt.title(title_text, fontsize = 15);        
         index += 1
+    plt.show()
 
 #
 # Load MINST dataset
