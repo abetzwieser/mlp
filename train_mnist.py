@@ -38,7 +38,7 @@ class MnistDataloader(object):
         for i in range(size):
             img = np.array(image_data[i * rows * cols:(i + 1) * rows * cols])
             img = img.reshape(28, 28)
-            images[i] = img            
+            images[i] = img.flatten(order='C').reshape(-1, 1)       # flatten images into 2d vectors of len 784
         return images, labels
             
     def load_data(self):
@@ -100,5 +100,6 @@ for i in range(0, 5):
     images_2_show.append(x_test[r])        
     titles_2_show.append('test image [' + str(r) + '] = ' + str(y_test[r]))    
 
-show_images(images_2_show, titles_2_show)
+#show_images(images_2_show, titles_2_show)
+
 
