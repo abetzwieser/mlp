@@ -51,7 +51,7 @@ class MnistDataloader(object):
 def show_images(images, title_texts):
     cols = 5
     rows = int(len(images)/cols) + 1
-    plt.figure(figsize=(30,20))
+    plt.figure(figsize=(10,10)) # (width, height)
     index = 1    
     for x in zip(images, title_texts):        
         image = x[0]
@@ -59,7 +59,7 @@ def show_images(images, title_texts):
         plt.subplot(rows, cols, index)
         plt.imshow(image, cmap=plt.cm.gray)
         if (title_text != ''):
-            plt.title(title_text, fontsize = 15);        
+            plt.title(title_text, fontsize = 10);        
         index += 1
     plt.show()
 
@@ -113,13 +113,13 @@ y_test = np.eye(num_classes)[y_test]
 # Creating mlp
 loss_fn = CrossEntropy()
 
-mlp_layers = (Layer(784, 48, Sigmoid()),
-              Layer(48, 24, Tanh()),
+mlp_layers = (Layer(784, 72, Sigmoid()),
+              Layer(72, 24, Tanh()),
               Layer(24, 10, Softmax()))
 
 lr = 0.001 # learning rate
 batch_size = 20
-epochs = 10
+epochs = 20
 
 mlp = MultilayerPerceptron(mlp_layers)
 training_losses, validation_losses = mlp.train(x_train, y_train, x_val, y_val, loss_fn, lr, batch_size, epochs)
@@ -139,7 +139,7 @@ graph(graph_epochs, training_losses, validation_losses)
 images_2_show = []
 titles_2_show = []
 
-for i in range(0, 5):
+for i in range(0, 10):
     r = random.randint(1, 10000)
     images_2_show.append(test_images[r])
     titles_2_show.append('prediction: ' + str(pred[r]) + ' true: ' + str(test_labels[r]))
