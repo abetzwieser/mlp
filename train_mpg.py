@@ -3,6 +3,7 @@ from ucimlrepo import fetch_ucirepo
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from mlp import *
+import random
 import matplotlib.pyplot as plt
 
 # downloads and splits the dataset, instantiates your MLP
@@ -78,21 +79,6 @@ y_val = y_val.to_numpy().reshape(-1, 1)
 X_test = X_test.to_numpy()
 y_test = y_test.to_numpy().reshape(-1, 1)
 
-# creating mlp
-act_fn = Relu()
-loss_fn = SquaredError()
-
-input_layer = Layer(7, 2, act_fn)
-h1_layer = Layer(2, 1, act_fn)
-output_layer = Layer (1, 1, act_fn)
-
-mlp_layers = (input_layer, h1_layer, output_layer)
-
-# learning rate
-lr = 0.001
-batch_size = 20
-epochs = 40
-
 def graph(graph_epochs, training_losses, validation_losses):
     plt.plot(graph_epochs, training_losses, 'g', label='Training loss')
     plt.plot(graph_epochs, validation_losses, 'b', label='Validation loss')
@@ -107,13 +93,30 @@ def graph(graph_epochs, training_losses, validation_losses):
     plt.legend()
     plt.show()
 
+# creating mlp
+lr = 0.001 # learning rate
+batch_size = 20
+epochs = 80
+
+act_fn = Relu()
+loss_fn = SquaredError()
+
+mlp_layers = (Layer(7, 2, Sigmoid()),
+              Layer(2, 1, Tanh()),
+              Layer(1, 1, Tanh()))
+
 mlp = MultilayerPerceptron(mlp_layers)
 training_losses, validation_losses = mlp.train(X_train, y_train, X_val, y_val, loss_fn, lr, batch_size, epochs)
 
 test_pred = mlp.forward(X_test)
 err = (test_pred - y_test)**2
-print((test_pred - y_test).sum())
-print(err.sum() / (len(test_pred)))
+err = err.sum() / (len(test_pred))
+print("error: ", err)
+
+print("10 random samples~")
+for i in range(10):
+    rando = random.randint(0, len(y_test))
+    print("predicted: ", test_pred.tolist()[rando], "\t\ttrue: ", y_test[rando])
 
 graph_epochs = range(1, epochs + 1)
 graph(graph_epochs, training_losses, validation_losses)
