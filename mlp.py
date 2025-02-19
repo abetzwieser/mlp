@@ -88,9 +88,13 @@ class Softmax(ActivationFunction):
         partition = x_exp.sum(1, keepdims=True)
         return x_exp / partition
     
-    def derivative(self, activation, delta):
-        d = np.tile(activation, np.size(activation))
-        return np.dot(d * (np.identity(np.size(activation)) - np.transpose(d)), delta)
+    def derivative(self, x, delta):
+        batch_size, num_classes = x.shape
+        jacobian = [num_classes, batch_size]
+        for i in range(batch_size):
+            s_i = x[i].reshape[-1, 1]
+            jacobian[i] = np.diagflat(s_i) - (s_i @ s_i.T)
+        return jacobian
 
 
 class Linear(ActivationFunction):
@@ -186,17 +190,17 @@ class Layer: # iterate over layers, vectorize neurons
         :return: (weight gradients, bias gradients)
         """
         # operator * does element-wise multiplication for ndarrays aka hadamard product
-
         d_activation_function = self.activation_function.derivative(self.activations)
-
-        self.delta = (delta * d_activation_function)@self.W.T
+        if (isinstance(self.activation_function, Softmax)):
+            dL_dz = delta @ d_activation_function
+            # dL_dz =  np.einsum('bij, bj -> bi'), d_activation_function, delta)
+        else:
+            dL_dz = delta * d_activation_function
+            
+        self.delta = dL_dz@self.W.T
         
-        # dL_dW = dw_Z (transposed) @ (delta * dz_O) / dw_Z = O(i-1) / dz_O = dz_Phi(Z)
-        # dL_dW = O(i-1) @ (delta * dz_Phi(Z))
-        dL_dW = self.inputs.T@(delta * d_activation_function)
-        
-        tmp = delta * d_activation_function
-        dL_db = np.sum(tmp, axis=0)
+        dL_dW = self.inputs.T@dL_dz
+        dL_db = np.sum(dL_dz, axis=0)
         
         return dL_dW, dL_db
 
