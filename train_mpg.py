@@ -98,7 +98,6 @@ lr = 0.001 # learning rate
 batch_size = 20
 epochs = 80
 
-act_fn = Relu()
 loss_fn = SquaredError()
 
 mlp_layers = (Layer(7, 2, Sigmoid()),
@@ -113,9 +112,13 @@ err = (test_pred - y_test)**2
 err = err.sum() / (len(test_pred))
 print("error: ", err)
 
-print("10 random samples~")
+
+test_pred = (test_pred * y_std) + y_mean
+y_test = (y_test * y_std) + y_mean
+
+print("\nHere are 10 random samples!")
 for i in range(10):
-    rando = random.randint(0, len(y_test))
+    rando = random.randint(0, len(y_test)-1)
     print("predicted: ", test_pred.tolist()[rando], "\t\ttrue: ", y_test[rando])
 
 graph_epochs = range(1, epochs + 1)
