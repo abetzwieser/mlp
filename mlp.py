@@ -61,7 +61,16 @@ class ActivationFunction(ABC):
 
 class Sigmoid(ActivationFunction):
     def forward(self, x):
-        return 1 / (1 + np.exp(-x))
+        return np.piecewise(
+            x,
+            [x > 0],
+            [lambda i: 1 / (1 + np.exp(-i)), lambda i: np.exp(i) / (1 + np.exp(i))]
+        )
+        # if x.all() >= 0:
+        #    return 1 / (1 + np.exp(-x))
+        #else:
+        #    return np.exp(x) / (1 + np.exp(x))
+        #return 1 / (1 + np.exp(-x))
     
     def derivative(self, x):
         return x * (1 - x)
@@ -85,9 +94,14 @@ class Relu(ActivationFunction):
 
 class Softmax(ActivationFunction):
     def forward(self, x):
-        x_exp = np.exp(x)
-        partition = x_exp.sum(1, keepdims=True)
-        return x_exp / partition
+        e = np.exp(x - np.max(x))
+        if e.ndim == 1:
+            return e / np.sum(e, axis=0)
+        else:
+            return e / np.sum(e, axis=1, keepdims=True)
+        #x_exp = np.exp(x)
+        #partition = x_exp.sum(1, keepdims=True)
+        #return x_exp / partition
     
     def derivative(self, x):
         batch_size, num_classes = x.shape
