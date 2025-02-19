@@ -79,20 +79,6 @@ y_val = y_val.to_numpy().reshape(-1, 1)
 X_test = X_test.to_numpy()
 y_test = y_test.to_numpy().reshape(-1, 1)
 
-def graph(graph_epochs, training_losses, validation_losses):
-    plt.plot(graph_epochs, training_losses, 'g', label='Training loss')
-    plt.plot(graph_epochs, validation_losses, 'b', label='Validation loss')
-
-    plt.title('Training and Validation Loss')
-
-    plt.xlabel('Epochs')
-    plt.xticks(graph_epochs)
-
-    plt.ylabel('Loss')
-
-    plt.legend()
-    plt.show()
-
 # creating mlp
 lr = 0.001 # learning rate
 batch_size = 20

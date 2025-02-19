@@ -1,6 +1,7 @@
 import numpy as np
 from abc import ABC, abstractmethod
 from typing import Tuple
+import matplotlib.pyplot as plt
 
 # may have trouble with good performance from MNIST; anywhere >60% reasonable
 # challenges, how did you address
@@ -88,11 +89,11 @@ class Softmax(ActivationFunction):
         partition = x_exp.sum(1, keepdims=True)
         return x_exp / partition
     
-    def derivative(self, x, delta):
+    def derivative(self, x):
         batch_size, num_classes = x.shape
-        jacobian = [num_classes, batch_size]
+        jacobian = np.zeros((batch_size, num_classes, num_classes))
         for i in range(batch_size):
-            s_i = x[i].reshape[-1, 1]
+            s_i = x[i].reshape(-1, 1)
             jacobian[i] = np.diagflat(s_i) - (s_i @ s_i.T)
         return jacobian
 
@@ -126,10 +127,13 @@ class SquaredError(LossFunction): # regression problem
 
 class CrossEntropy(LossFunction): # classification problem
     def loss(self, y_true, y_pred):
-        return -np.log(y_pred[range(len(y_pred)), y_true])
+        epsilon = 1e-15
+        y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
+        loss = -np.sum(y_true * np.log(y_pred), axis=1).mean()
+        return loss
     
-    def derivative(self, y_true, y_pred):
-        return (-y_true / y_pred) - ((1 - y_true) / (1 - y_pred))
+    def derivative(self, y_true, y_pred): # derivative for softmax
+        return y_pred - y_true
 
 
 class Layer: # iterate over layers, vectorize neurons
@@ -192,10 +196,10 @@ class Layer: # iterate over layers, vectorize neurons
         # operator * does element-wise multiplication for ndarrays aka hadamard product
         d_activation_function = self.activation_function.derivative(self.activations)
         if (isinstance(self.activation_function, Softmax)):
-            dL_dz = delta @ d_activation_function
-            # dL_dz =  np.einsum('bij, bj -> bi'), d_activation_function, delta)
+            dL_dz =  np.einsum(('bij, bj -> bi'), d_activation_function, delta)
         else:
             dL_dz = delta * d_activation_function
+
             
         self.delta = dL_dz@self.W.T
         
@@ -294,3 +298,17 @@ class MultilayerPerceptron:
             print("epoch: ", epoch, "training_loss: ", avg_loss, "validation_loss: ", val_loss)
         
         return training_losses, validation_losses
+    
+def graph(graph_epochs, training_losses, validation_losses):
+    plt.plot(graph_epochs, training_losses, 'g', label='Training loss')
+    plt.plot(graph_epochs, validation_losses, 'b', label='Validation loss')
+
+    plt.title('Training and Validation Loss')
+
+    plt.xlabel('Epochs')
+    plt.xticks(graph_epochs)
+
+    plt.ylabel('Loss')
+
+    plt.legend()
+    plt.show()
