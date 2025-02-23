@@ -13,7 +13,7 @@ def batch_generator(train_x, train_y, batch_size):
 
     :return tuple: (batch_x, batch_y) where batch_x has shape (B, f) and batch_y has shape (B, q). The last batch may be smaller.
     """
-    # create random indices so batches are not the same every time model is trained
+    # randomize order of data so batches are not the same every time model is trained
     rng = np.random.default_rng()
     indices = rng.permutation(train_x.shape[0])
     shuffled_x = train_x[indices]
@@ -138,7 +138,7 @@ class CrossEntropy(LossFunction): # classification problem - MNIST
         return y_pred - y_true
 
 
-class Layer: # iterate over layers, vectorize neurons
+class Layer:
     def __init__(self, fan_in: int, fan_out: int, activation_function: ActivationFunction):
         """
         Initializes a layer of neurons
