@@ -136,12 +136,12 @@ y_test = np.eye(num_classes)[y_test]
 # Creating MLP
 loss_fn = CrossEntropy()
 
-mlp_layers = (Layer(784, 72, Sigmoid()),
-              Layer(72, 24, Tanh()),
-              Layer(24, 10, Softmax()))
+mlp_layers = (Layer(784, 136, Relu()),
+              Layer(136, 50, Tanh()),
+              Layer(50, 10, Softmax()))
 
 lr = 0.001 # learning rate
-batch_size = 20
+batch_size = 30
 epochs = 20
 
 mlp = MultilayerPerceptron(mlp_layers)
