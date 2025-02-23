@@ -168,7 +168,7 @@ images_2_show = []
 titles_2_show = []
 
 for i in range(0, 10):
-    r = random.randint(1, 10000)
+    r = test_labels.index(i)
     images_2_show.append(test_images[r])
     titles_2_show.append('prediction: ' + str(pred[r]) + ' true: ' + str(test_labels[r]))
     
