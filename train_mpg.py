@@ -5,6 +5,48 @@ from sklearn.model_selection import train_test_split
 from mlp import *
 import random
 import matplotlib.pyplot as plt
+import copy
+
+def get_mlp_avg_performance(mlp_layers, runs, data, test_data, show_graph):
+    """Gives average MLP performance with a given design over x number of runs
+
+    :param mlp_layers: tuple with MLP layers
+    :param runs: number of times to run
+    :param data: tuple of MLP parameters
+    :param test_data: tuple of (test features, test targets)
+    :param graph: boolean value indicating whether to display graph for each run
+    """
+    X_train, y_train, X_val, y_val, loss_fn, lr, batch_size, epochs = data # retrieve MLP params
+    X_test, y_test = test_data # retrieve test data
+    test_losses = []
+    test_err = []
+    
+    for i in range(runs):
+        new_mlp_layers = copy.deepcopy(mlp_layers) # get deep copy of layers (avoid using trained layers)
+        mlp = MultilayerPerceptron(new_mlp_layers) # new MLP
+        
+        # train & predict on test features
+        t_losses, v_losses = mlp.train(X_train, y_train, X_val, y_val, loss_fn, lr, batch_size, epochs)
+        test_pred = mlp.forward(X_test)
+        
+        loss = (test_pred - y_test).sum() # compute loss
+        err = (test_pred - y_test)**2   # squared error
+        err = err.sum() / (len(test_pred))  # getting mean
+        
+        # get loss & error for this run
+        test_losses.append(loss)
+        test_err.append(err)
+        
+        if show_graph: # graph this run's training/validation curves
+            graph_epochs = range(1, epochs + 1)
+            graph(graph_epochs, t_losses, v_losses)
+            
+    # calculate & display average error / loss on test set
+    test_losses = np.array(test_losses)
+    test_err = np.array(test_err)
+    avg_loss = test_losses.sum()/len(test_losses)
+    avg_err = test_err.sum()/len(test_err)
+    print ("average error: ", avg_err,  "average loss: ", avg_loss)
 
 # data preparation borrowed from:
 # https://github.com/jghawaly/CSC7809_FoundationModels/blob/main/example_notebooks/linear_regression.ipynb
@@ -81,13 +123,15 @@ y_test = y_test.to_numpy().reshape(-1, 1)
 # creating MLP
 lr = 0.001 # learning rate
 batch_size = 20
-epochs = 75
+epochs = 90
 
 loss_fn = SquaredError()
 
 mlp_layers = (Layer(7, 2, Sigmoid()),
               Layer(2, 1, Tanh()),
               Layer(1, 1, Tanh()))
+
+layer_dupe = copy.deepcopy(mlp_layers) # get deep copy of layers before training
 
 mlp = MultilayerPerceptron(mlp_layers)
 training_losses, validation_losses = mlp.train(X_train, y_train, X_val, y_val, loss_fn, lr, batch_size, epochs)
@@ -101,17 +145,25 @@ print("error: ", err, "loss: ", loss) # print MSE, loss
 
 # reverse transform values for human readability
 test_pred = (test_pred * y_std) + y_mean
-y_test = (y_test * y_std) + y_mean
+test_true = (y_test * y_std) + y_mean
 
 # print 10 random sample test values, comparing MLP prediction v. true value
 print("\nHere are 10 random samples!")
 for i in range(10):
     rando = random.randint(0, len(y_test)-1)
-    print("predicted: ", test_pred.tolist()[rando], "\t\ttrue: ", y_test[rando])
+    print("predicted: ", test_pred.tolist()[rando], "\t\ttrue: ", test_true[rando])
 
 # plot training/validation losses
 graph_epochs = range(1, epochs + 1)
 graph(graph_epochs, training_losses, validation_losses)
 
+# get average performance of current design over X number of runs
+runs = 100
+show_graph = False
+
+data = (X_train, y_train, X_val, y_val, loss_fn, lr, batch_size, epochs)
+test_data = (X_test, y_test)
+
+get_mlp_avg_performance(layer_dupe, runs, data, test_data, show_graph)
 
     
