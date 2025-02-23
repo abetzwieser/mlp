@@ -164,6 +164,6 @@ show_graph = False
 data = (X_train, y_train, X_val, y_val, loss_fn, lr, batch_size, epochs)
 test_data = (X_test, y_test)
 
-get_mlp_avg_performance(layer_dupe, runs, data, test_data, show_graph)
+#get_mlp_avg_performance(layer_dupe, runs, data, test_data, show_graph)
 
     
