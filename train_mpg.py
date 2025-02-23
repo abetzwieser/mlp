@@ -6,9 +6,8 @@ from mlp import *
 import random
 import matplotlib.pyplot as plt
 
-# downloads and splits the dataset, instantiates your MLP
-# design, and trains the model. The training and validation loss should be printed out at each
-# epoch.
+# data preparation borrowed from:
+# https://github.com/jghawaly/CSC7809_FoundationModels/blob/main/example_notebooks/linear_regression.ipynb
 
 # fetch dataset
 auto_mpg = fetch_ucirepo(id=9)
@@ -71,7 +70,7 @@ print(f"Samples in Training:   {len(X_train)}")
 print(f"Samples in Validation: {len(X_val)}")
 print(f"Samples in Testing:    {len(X_test)}")
 
-
+# Converting pandas dataframes -> 2darrays
 X_train = X_train.to_numpy()
 y_train = y_train.to_numpy().reshape(-1, 1) # reshape to be a 2d array
 X_val = X_val.to_numpy()
@@ -79,10 +78,10 @@ y_val = y_val.to_numpy().reshape(-1, 1)
 X_test = X_test.to_numpy()
 y_test = y_test.to_numpy().reshape(-1, 1)
 
-# creating mlp
+# creating MLP
 lr = 0.001 # learning rate
 batch_size = 20
-epochs = 80
+epochs = 75
 
 loss_fn = SquaredError()
 
@@ -93,20 +92,24 @@ mlp_layers = (Layer(7, 2, Sigmoid()),
 mlp = MultilayerPerceptron(mlp_layers)
 training_losses, validation_losses = mlp.train(X_train, y_train, X_val, y_val, loss_fn, lr, batch_size, epochs)
 
+# testing performance with test set
 test_pred = mlp.forward(X_test)
-err = (test_pred - y_test)**2
-err = err.sum() / (len(test_pred))
-print("error: ", err)
+loss = (test_pred - y_test).sum() # compute loss
+err = (test_pred - y_test)**2   # squared error
+err = err.sum() / (len(test_pred))  # getting mean
+print("error: ", err, "loss: ", loss) # print MSE, loss
 
-
+# reverse transform values for human readability
 test_pred = (test_pred * y_std) + y_mean
 y_test = (y_test * y_std) + y_mean
 
+# print 10 random sample test values, comparing MLP prediction v. true value
 print("\nHere are 10 random samples!")
 for i in range(10):
     rando = random.randint(0, len(y_test)-1)
     print("predicted: ", test_pred.tolist()[rando], "\t\ttrue: ", y_test[rando])
 
+# plot training/validation losses
 graph_epochs = range(1, epochs + 1)
 graph(graph_epochs, training_losses, validation_losses)
 

@@ -3,14 +3,6 @@ from abc import ABC, abstractmethod
 from typing import Tuple
 import matplotlib.pyplot as plt
 
-# may have trouble with good performance from MNIST; anywhere >60% reasonable
-# challenges, how did you address
-# report should be short
-np.random.seed(None)
-
-# tqdm
-# just don't use python 3.13
-# tested & run with python 3.12.1
 def batch_generator(train_x, train_y, batch_size):
     """
     Generator that yields batches of train_x and train_y.
@@ -21,15 +13,16 @@ def batch_generator(train_x, train_y, batch_size):
 
     :return tuple: (batch_x, batch_y) where batch_x has shape (B, f) and batch_y has shape (B, q). The last batch may be smaller.
     """
+    # create random indices so batches are not the same every time model is trained
     rng = np.random.default_rng()
     indices = rng.permutation(train_x.shape[0])
     shuffled_x = train_x[indices]
     shuffled_y = train_y[indices]
     
-    # Determine the number of batches needed.
+    # get how many batches there should be
     num_batches = int(np.ceil(train_x.shape[0] / batch_size))
     
-    # Split the shuffled arrays into batches without an explicit loop.
+    # split into batches
     batch_x = np.array_split(shuffled_x, num_batches)
     batch_y = np.array_split(shuffled_y, num_batches)
     
@@ -61,16 +54,13 @@ class ActivationFunction(ABC):
 
 class Sigmoid(ActivationFunction):
     def forward(self, x):
+        # numerically stable sigmoid from:
+        # https://stackoverflow.com/questions/51976461/optimal-way-of-defining-a-numerically-stable-sigmoid-function-for-a-list-in-pyth
         return np.piecewise(
             x,
             [x > 0],
             [lambda i: 1 / (1 + np.exp(-i)), lambda i: np.exp(i) / (1 + np.exp(i))]
         )
-        # if x.all() >= 0:
-        #    return 1 / (1 + np.exp(-x))
-        #else:
-        #    return np.exp(x) / (1 + np.exp(x))
-        #return 1 / (1 + np.exp(-x))
     
     def derivative(self, x):
         return x * (1 - x)
@@ -94,14 +84,14 @@ class Relu(ActivationFunction):
 
 class Softmax(ActivationFunction):
     def forward(self, x):
+        # numerically stable version of softmax from:
+        # https://shusei-e.github.io/deep%20learning/softmax_without_overflow/
+        # https://stackoverflow.com/questions/34968722/how-to-implement-the-softmax-function-in-python
         e = np.exp(x - np.max(x))
         if e.ndim == 1:
             return e / np.sum(e, axis=0)
         else:
             return e / np.sum(e, axis=1, keepdims=True)
-        #x_exp = np.exp(x)
-        #partition = x_exp.sum(1, keepdims=True)
-        #return x_exp / partition
     
     def derivative(self, x):
         batch_size, num_classes = x.shape
@@ -117,7 +107,7 @@ class Linear(ActivationFunction):
         return x
     
     def derivative(self, x):
-        # return 1
+        # return ndarray of 1s in matching shape for matrix calculations
         return np.ones_like(x)
 
 
@@ -131,22 +121,20 @@ class LossFunction(ABC):
         pass
 
 
-class SquaredError(LossFunction): # regression problem
-    def loss(self, y_true, y_pred): # calculate mean when you do gradient update
+class SquaredError(LossFunction): # regression problem - MPG
+    def loss(self, y_true, y_pred):
         return 0.5 * ((y_pred - y_true) ** 2)
     
     def derivative(self, y_true, y_pred):
         return y_pred - y_true
 
 
-class CrossEntropy(LossFunction): # classification problem
+class CrossEntropy(LossFunction): # classification problem - MNIST
     def loss(self, y_true, y_pred):
-        epsilon = 1e-15
-        y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
         loss = -np.sum(y_true * np.log(y_pred), axis=1).mean()
         return loss
     
-    def derivative(self, y_true, y_pred): # derivative for softmax
+    def derivative(self, y_true, y_pred): # derivative with respect to softmax
         return y_pred - y_true
 
 
@@ -167,7 +155,7 @@ class Layer: # iterate over layers, vectorize neurons
         self.activations = None
         # this will store the delta term (dL_dPhi, backward prop)
         self.delta = None
-        # stores inputs to this layer
+        # this will store inputs to this layer (For backward prop)
         self.inputs = None
 
         # Initialize weights and biaes
@@ -176,9 +164,11 @@ class Layer: # iterate over layers, vectorize neurons
         self.b = np.zeros(fan_out) # biases
         
     def glorot_uniform(self):
+        # implementation for glorot uniform based from:
+        # https://stackoverflow.com/questions/62249084/what-is-the-numpy-equivalent-of-tensorflow-xavier-initializer-for-cnn
+        rng = np.random.default_rng()
         shape = self.fan_in, self.fan_out
         sd = np.sqrt(6.0 / (self.fan_in + self.fan_out))
-        rng = np.random.default_rng()
         return rng.uniform(-sd, sd, size=shape)
 
     def forward(self, h: np.ndarray):
@@ -188,15 +178,10 @@ class Layer: # iterate over layers, vectorize neurons
         :param h: input to layer
         :return: layer activations
         """
-        # compute dot product of h & weights + apply biases
-        # dot product note: same num of rows as 1st m, same num of cols as 2nd m
-        # shape: rows x cols
-        self.inputs = h
+        self.inputs = h # store inputs for later use in backprop
+        
         pre_activations = h@self.W + self.b
-        
-        self.activations = self.activation_function.forward(pre_activations)
-        
-
+        self.activations = self.activation_function.forward(pre_activations)  
         return self.activations
 
     def backward(self, h: np.ndarray, delta: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -207,13 +192,14 @@ class Layer: # iterate over layers, vectorize neurons
         :param delta: delta term from layer above
         :return: (weight gradients, bias gradients)
         """
-        # operator * does element-wise multiplication for ndarrays aka hadamard product
         d_activation_function = self.activation_function.derivative(self.activations)
         if (isinstance(self.activation_function, Softmax)):
-            dL_dz =  np.einsum(('bij, bj -> bi'), d_activation_function, delta)
+            # use einsum to compute element-wise multiplication + sum of jacobian matrices & delta transpose
+            # explanation of einsum:
+            # https://stackoverflow.com/questions/26089893/understanding-numpys-einsum
+            dL_dz = np.einsum(('bij, bj -> bi'), d_activation_function, delta)
         else:
             dL_dz = delta * d_activation_function
-
             
         self.delta = dL_dz@self.W.T
         
@@ -274,37 +260,35 @@ class MultilayerPerceptron:
         :param learning_rate: learning rate for parameter updates
         :param batch_size: size of each batch
         :param epochs: number of epochs
-        :return:
+        :return: list of training losses, list of validation losses
         """
         training_losses = []
         validation_losses = []
-        
-        # epoch = # of times to run
-        # batches = splits of input data sets
-       
-        # run val only after train
         
         for epoch in range(epochs):
             train_batches_x, train_batches_y = batch_generator(train_x, train_y, batch_size)
             avg_loss = 0.0
             for i in range(len(train_batches_x)):
+                # forward prop
                 out = self.forward(train_batches_x[i])
                 
+                # backward prop
                 loss_grad = loss_func.derivative(train_batches_y[i], out)
-
                 train_dl_dw, train_dl_db = self.backward(loss_grad, out)
                 
+                # update weights/biases
                 for layer, dl_dw, dl_db in zip(self.layers, reversed(train_dl_dw), reversed(train_dl_db)):
                     layer.W -= learning_rate * dl_dw
                     layer.b -= learning_rate * dl_db
                 
+                # getting loss for a particular batch
                 loss = loss_func.loss(train_batches_y[i], out).sum()
                 avg_loss+=loss
-                
                 
             avg_loss/=len(train_batches_x)
             training_losses.append(avg_loss)
 
+            # run mlp on validation set
             val_out = self.forward(val_x)
             val_loss = loss_func.loss(val_y, val_out).sum()
             validation_losses.append(val_loss)
@@ -314,6 +298,13 @@ class MultilayerPerceptron:
         return training_losses, validation_losses
     
 def graph(graph_epochs, training_losses, validation_losses):
+    """Graph the training and validation curves
+    
+    :param graph_epochs: list of epochs for graph x-axis
+    :param training_losses: list of model's training losses
+    :param validation_losses: list of model's validation losses
+    :return:
+    """
     plt.plot(graph_epochs, training_losses, 'g', label='Training loss')
     plt.plot(graph_epochs, validation_losses, 'b', label='Validation loss')
 
