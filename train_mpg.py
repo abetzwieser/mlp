@@ -138,7 +138,7 @@ training_losses, validation_losses = mlp.train(X_train, y_train, X_val, y_val, l
 
 # testing performance with test set
 test_pred = mlp.forward(X_test)
-loss = (test_pred - y_test).sum() # compute loss
+loss = (abs(test_pred - y_test)).sum() # compute loss
 err = (test_pred - y_test)**2   # squared error
 err = err.sum() / (len(test_pred))  # getting mean
 print("error: ", err, "loss: ", loss) # print MSE, loss
